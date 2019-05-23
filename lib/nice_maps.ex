@@ -98,7 +98,10 @@ defmodule NiceMaps do
   defp convert_to_camelcase(key) when is_bitstring(key) do
     first_char = String.first(key)
 
-    key |> Macro.camelize() |> String.replace(String.upcase(first_char), first_char)
+    key
+    |> Macro.camelize()
+    |> IO.inspect()
+    |> String.replace_leading(String.upcase(first_char), first_char)
   end
 
   defp convert_to_camelcase(key) when is_atom(key),
