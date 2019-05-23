@@ -100,7 +100,6 @@ defmodule NiceMaps do
 
     key
     |> Macro.camelize()
-    |> IO.inspect()
     |> String.replace_leading(String.upcase(first_char), first_char)
   end
 
