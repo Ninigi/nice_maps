@@ -66,16 +66,15 @@ defmodule NiceMaps do
   @doc false
   def parse_keys(map, opts) do
     case Keyword.get(opts, :keys) do
-      :camelcase -> parse_camelcase_keys(map)
-      :snake_case -> parse_snake_case(map)
+      :camelcase -> parse_camelcase_keys(map, opts)
+      :snake_case -> parse_snake_case(map, opts)
       nil -> map
     end
   end
 
-  defp parse_snake_case(map) do
+  defp parse_snake_case(map, opts) do
     Enum.map(map, fn
-      {key, val} when is_map(val) -> {convert_to_snake_case(key), parse(val)}
-      {key, val} -> {convert_to_snake_case(key), val}
+      {key, val} -> {convert_to_snake_case(key), parse(val, opts)}
     end)
     |> Enum.into(%{})
   end
@@ -87,10 +86,9 @@ defmodule NiceMaps do
 
   defp convert_to_snake_case(key), do: key
 
-  defp parse_camelcase_keys(map) do
+  defp parse_camelcase_keys(map, opts) do
     Enum.map(map, fn
-      {key, val} when is_map(val) -> {convert_to_camelcase(key), parse(val)}
-      {key, val} -> {convert_to_camelcase(key), val}
+      {key, val} -> {convert_to_camelcase(key), parse(val, opts)}
     end)
     |> Enum.into(%{})
   end

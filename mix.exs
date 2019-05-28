@@ -4,7 +4,7 @@ defmodule NiceMaps.MixProject do
   def project do
     [
       app: :nice_maps,
-      version: "0.1.1",
+      version: "0.1.2",
       elixir: "~> 1.8",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
