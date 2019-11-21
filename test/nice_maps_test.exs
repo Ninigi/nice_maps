@@ -52,5 +52,19 @@ defmodule NiceMapsTest do
 
       assert %{order_lines: [%{fulfillment_status: _}]} = NiceMaps.parse(map, keys: :snake_case)
     end
+
+    test "convert_structs: true" do
+      map = %{
+        list: [
+          %MyStruct{id: 1, my_key: "foo"}
+        ],
+        struct: %MyStruct{id: 2, my_key: "bar"}
+      }
+
+      assert %{list: [map1], struct: map2} = NiceMaps.parse(map, convert_structs: true)
+
+      refute Map.has_key?(map1, :__struct__)
+      refute Map.has_key?(map2, :__struct__)
+    end
   end
 end

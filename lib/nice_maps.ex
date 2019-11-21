@@ -44,6 +44,21 @@ defmodule NiceMaps do
     iex> NiceMaps.parse(%{"string" => "value", "another_string" => "value"}, keys: :camelcase)
     %{"string" => "value", "anotherString" => "value"}
 
+    # Convert all structs into maps
+    ...> map = %{
+    ...>   list: [
+    ...>     %MyStruct{id: 1, my_key: "foo"}
+    ...>   ],
+    ...>   struct: %MyStruct{id: 2, my_key: "bar"}
+    ...> }
+    ...> NiceMaps.parse(map, convert_structs: true)
+    %{
+      list: [
+        %{id: 1, my_key: "foo"}
+      ],
+      struct: %{id: 2, my_key: "bar"}
+    }
+
   """
   def parse(map_or_struct, opts \\ [])
 
@@ -66,9 +81,18 @@ defmodule NiceMaps do
   @doc false
   def parse_keys(map, opts) do
     case Keyword.get(opts, :keys) do
-      :camelcase -> parse_camelcase_keys(map, opts)
-      :snake_case -> parse_snake_case(map, opts)
-      nil -> map
+      :camelcase ->
+        parse_camelcase_keys(map, opts)
+
+      :snake_case ->
+        parse_snake_case(map, opts)
+
+      nil ->
+        if Keyword.get(opts, :convert_structs) do
+          for {key, val} <- map, do: {key, parse(val, opts)}, into: %{}
+        else
+          map
+        end
     end
   end
 
