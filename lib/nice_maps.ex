@@ -1,64 +1,87 @@
 defmodule NiceMaps do
   @moduledoc """
-  Documentation for NiceMaps.
+  NiceMaps provides a single function `parse` to convert maps into the desired format.
+
+  It can build camelcase/snake_case keys, convert string keys to atom keys and vice versa,
+  convert structs to maps
   """
 
   @doc """
-  Hello world.
+  The main interface - this is where the magic happens.
+
+  ## Options
+
+  * `:keys` one of `:camelcase` or `:snake_case`
+  * `:convert_structs` one of `true` or `false`, default: `false`
+  * `:key_type`, one of `:string` or `:existing_atom`
 
   ## Examples
 
-    # Without Options:
+  ### Without Options:
 
-    iex> NiceMaps.parse(%MyStruct{id: 1, my_key: "bar"})
-    %{id: 1, my_key: "bar"}
+      iex> NiceMaps.parse(%MyStruct{id: 1, my_key: "bar"})
+      %{id: 1, my_key: "bar"}
 
-    iex> NiceMaps.parse([%MyStruct{id: 1, my_key: "bar"}, %{value: "a"}])
-    [%{id: 1, my_key: "bar"}, %{value: "a"}]
+      iex> NiceMaps.parse([%MyStruct{id: 1, my_key: "bar"}, %{value: "a"}])
+      [%{id: 1, my_key: "bar"}, %{value: "a"}]
 
-    iex> NiceMaps.parse([%MyStruct{id: 1, my_key: "bar"}, "String"])
-    [%{id: 1, my_key: "bar"}, "String"]
+      iex> NiceMaps.parse([%MyStruct{id: 1, my_key: "bar"}, "String"])
+      [%{id: 1, my_key: "bar"}, "String"]
 
-    iex> NiceMaps.parse(%{0 => "0", 1 => "1"})
-    %{0 => "0", 1 => "1"}
+      iex> NiceMaps.parse(%{0 => "0", 1 => "1"})
+      %{0 => "0", 1 => "1"}
 
-    # Keys to camelcase:
+  ### Keys to camelcase:
 
-    iex> NiceMaps.parse([%MyStruct{id: 1, my_key: "bar"}, %{value: "a"}], keys: :camelcase)
-    [%{id: 1, myKey: "bar"}, %{value: "a"}]
+      iex> NiceMaps.parse([%MyStruct{id: 1, my_key: "bar"}, %{value: "a"}], keys: :camelcase)
+      [%{id: 1, myKey: "bar"}, %{value: "a"}]
 
-    iex> NiceMaps.parse(%MyStruct{id: 1, my_key: "foo"}, keys: :camelcase)
-    %{id: 1, myKey: "foo"}
+      iex> NiceMaps.parse(%MyStruct{id: 1, my_key: "foo"}, keys: :camelcase)
+      %{id: 1, myKey: "foo"}
 
-    iex> NiceMaps.parse(%{"string" => "value", "another_string" => "value"}, keys: :camelcase)
-    %{"string" => "value", "anotherString" => "value"}
+      iex> NiceMaps.parse(%{"string" => "value", "another_string" => "value"}, keys: :camelcase)
+      %{"string" => "value", "anotherString" => "value"}
 
-    # Keys to snake case:
+      # Keys to snake case:
 
-    iex> NiceMaps.parse(%MyCamelStruct{id: 1, myKey: "foo"}, keys: :snake_case)
-    %{id: 1, my_key: "foo"}
+      iex> NiceMaps.parse(%MyCamelStruct{id: 1, myKey: "foo"}, keys: :snake_case)
+      %{id: 1, my_key: "foo"}
 
-    iex> NiceMaps.parse(%MyCamelStruct{id: 1, myKey: "foo"}, keys: :snake_case)
-    %{id: 1, my_key: "foo"}
+      iex> NiceMaps.parse(%MyCamelStruct{id: 1, myKey: "foo"}, keys: :snake_case)
+      %{id: 1, my_key: "foo"}
 
-    iex> NiceMaps.parse(%{"string" => "value", "another_string" => "value"}, keys: :camelcase)
-    %{"string" => "value", "anotherString" => "value"}
+      iex> NiceMaps.parse(%{"string" => "value", "another_string" => "value"}, keys: :camelcase)
+      %{"string" => "value", "anotherString" => "value"}
 
-    # Convert all structs into maps
-    ...> map = %{
-    ...>   list: [
-    ...>     %MyStruct{id: 1, my_key: "foo"}
-    ...>   ],
-    ...>   struct: %MyStruct{id: 2, my_key: "bar"}
-    ...> }
-    ...> NiceMaps.parse(map, convert_structs: true)
-    %{
-      list: [
-        %{id: 1, my_key: "foo"}
-      ],
-      struct: %{id: 2, my_key: "bar"}
-    }
+  ### Convert all structs into maps
 
+      iex> map = %{
+      ...>   list: [
+      ...>     %MyStruct{id: 1, my_key: "foo"}
+      ...>   ],
+      ...>   struct: %MyStruct{id: 2, my_key: "bar"}
+      ...> }
+      ...> NiceMaps.parse(map, convert_structs: true)
+      %{
+        list: [
+          %{id: 1, my_key: "foo"}
+        ],
+        struct: %{id: 2, my_key: "bar"}
+      }
+
+  ### Convert string keys to existing atom
+
+      iex> map = %{
+      ...>   "key1" => "value 1",
+      ...>   "nested" => %{"key2" => "value 2"},
+      ...>   "list" => [%{"key3" => "value 3", "key4" => "value 4"}]
+      ...> }
+      iex> NiceMaps.parse(map, key_type: :existing_atom)
+      %{
+        key1: "value 1",
+        nested: %{key2: "value 2"},
+        list: [%{key3: "value 3", key4: "value 4"}]
+      }
   """
   def parse(map_or_struct, opts \\ [])
 
@@ -88,45 +111,85 @@ defmodule NiceMaps do
         parse_snake_case(map, opts)
 
       nil ->
-        if Keyword.get(opts, :convert_structs) do
-          for {key, val} <- map, do: {key, parse(val, opts)}, into: %{}
+        key_type = Keyword.get(opts, :key_type)
+        convert_structs = Keyword.get(opts, :convert_structs)
+
+        if key_type || convert_structs do
+          for {key, val} <- map, do: {parse_key_type(key, key_type), parse(val, opts)}, into: %{}
         else
           map
         end
     end
   end
 
+  defp parse_key_type(key, nil), do: key
+
+  defp parse_key_type(key, :existing_atom) when is_atom(key), do: key
+
+  defp parse_key_type(key, :existing_atom) when is_bitstring(key),
+    do: String.to_existing_atom(key)
+
+  defp parse_key_type(key, :string) when is_bitstring(key), do: key
+  defp parse_key_type(key, :string), do: to_string(key)
+
   defp parse_snake_case(map, opts) do
     Enum.map(map, fn
-      {key, val} -> {convert_to_snake_case(key), parse(val, opts)}
+      {key, val} -> {convert_to_snake_case(key, opts), parse(val, opts)}
     end)
     |> Enum.into(%{})
   end
 
-  defp convert_to_snake_case(key) when is_bitstring(key), do: Macro.underscore(key)
+  defp convert_to_snake_case(key, opts) when is_bitstring(key) do
+    key_type = Keyword.get(opts, :key_type, :string)
+    key |> Macro.underscore() |> parse_key_type(key_type)
+  end
 
-  defp convert_to_snake_case(key) when is_atom(key),
-    do: key |> to_string() |> Macro.underscore() |> String.to_atom()
+  defp convert_to_snake_case(key, opts) when is_atom(key) do
+    key_type = Keyword.get(opts, :key_type)
+    new_key = key |> to_string() |> Macro.underscore()
 
-  defp convert_to_snake_case(key), do: key
+    if key_type do
+      parse_key_type(new_key, key_type)
+    else
+      String.to_atom(new_key)
+    end
+  end
+
+  defp convert_to_snake_case(key, opts) do
+    key_type = Keyword.get(opts, :key_type)
+    key |> parse_key_type(key_type)
+  end
 
   defp parse_camelcase_keys(map, opts) do
     Enum.map(map, fn
-      {key, val} -> {convert_to_camelcase(key), parse(val, opts)}
+      {key, val} -> {convert_to_camelcase(key, opts), parse(val, opts)}
     end)
     |> Enum.into(%{})
   end
 
-  defp convert_to_camelcase(key) when is_bitstring(key) do
+  defp convert_to_camelcase(key, opts) when is_bitstring(key) do
     first_char = String.first(key)
+    key_type = Keyword.get(opts, :key_type, :string)
 
     key
     |> Macro.camelize()
     |> String.replace_leading(String.upcase(first_char), first_char)
+    |> parse_key_type(key_type)
   end
 
-  defp convert_to_camelcase(key) when is_atom(key),
-    do: key |> to_string() |> convert_to_camelcase() |> String.to_atom()
+  defp convert_to_camelcase(key, opts) when is_atom(key) do
+    key_type = Keyword.get(opts, :key_type)
+    new_key = key |> to_string() |> convert_to_camelcase(opts)
 
-  defp convert_to_camelcase(key), do: key
+    if key_type do
+      parse_key_type(new_key, key_type)
+    else
+      String.to_atom(new_key)
+    end
+  end
+
+  defp convert_to_camelcase(key, opts) do
+    key_type = Keyword.get(opts, :key_type)
+    parse_key_type(key, key_type)
+  end
 end
