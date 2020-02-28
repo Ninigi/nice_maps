@@ -1,6 +1,8 @@
 defmodule NiceMaps.MixProject do
   use Mix.Project
 
+  @github "https://github.com/Ninigi/nice_maps"
+
   def project do
     [
       app: :nice_maps,
@@ -8,7 +10,22 @@ defmodule NiceMaps.MixProject do
       elixir: "~> 1.8",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
+      package: package(),
       deps: deps()
+    ]
+  end
+
+  defp package do
+    [
+      files: [
+        "lib",
+        "mix.exs",
+        "README.md",
+        "LICENSE.md"
+      ],
+      links: %{"github" => @github},
+      maintainers: ["Fabian Zitter <fabian.zitter@gmail.com>"],
+      licenses: ["MIT"]
     ]
   end
 
