@@ -3,7 +3,7 @@ defmodule NiceMaps do
   NiceMaps provides a single function `parse` to convert maps into the desired format.
 
   It can build camelcase/snake_case keys, convert string keys to atom keys and vice versa,
-  convert structs to maps
+  or convert structs to maps
   """
 
   @doc """
@@ -13,7 +13,7 @@ defmodule NiceMaps do
 
   * `:keys` one of `:camelcase` or `:snake_case`
   * `:convert_structs` one of `true` or `false`, default: `false`
-  * `:key_type`, one of `:string` or `:existing_atom`
+  * `:key_type`, one of `:string`, `:existing_atom`, or `:unsave_atom` (please use `:existing_atom` whenever possible)
 
   ## Examples
 
@@ -59,14 +59,16 @@ defmodule NiceMaps do
       ...>   list: [
       ...>     %MyStruct{id: 1, my_key: "foo"}
       ...>   ],
-      ...>   struct: %MyStruct{id: 2, my_key: "bar"}
+      ...>   struct: %MyStruct{id: 2, my_key: "bar"},
+      ...>   other_struct: %MyStruct{id: 3, my_key: %MyStruct{id: 4, my_key: nil}}
       ...> }
       ...> NiceMaps.parse(map, convert_structs: true)
       %{
         list: [
           %{id: 1, my_key: "foo"}
         ],
-        struct: %{id: 2, my_key: "bar"}
+        struct: %{id: 2, my_key: "bar"},
+        other_struct: %{id: 3, my_key: %{id: 4, my_key: nil}}
       }
 
   ### Convert string keys to existing atom
@@ -74,14 +76,38 @@ defmodule NiceMaps do
       iex> map = %{
       ...>   "key1" => "value 1",
       ...>   "nested" => %{"key2" => "value 2"},
-      ...>   "list" => [%{"key3" => "value 3", "key4" => "value 4"}]
+      ...>   "list" => [%{"key3" => "value 3", "key4" => "value 4"}],
+      ...>    1 => "an integer key",
+      ...>    %MyStruct{} => "a struct key"
       ...> }
+      iex> [:key1, :key2, :key3, :key4, :nested, :list] # Make sure atoms exist
       iex> NiceMaps.parse(map, key_type: :existing_atom)
       %{
-        key1: "value 1",
-        nested: %{key2: "value 2"},
-        list: [%{key3: "value 3", key4: "value 4"}]
+        :key1 => "value 1",
+        :nested => %{key2: "value 2"},
+        :list => [%{key3: "value 3", key4: "value 4"}],
+        1 => "an integer key",
+        %MyStruct{} => "a struct key"
       }
+
+  ### Mix it all together
+
+      iex> map = %{
+      ...>   "hello_there" => [%{"aA" => "asdf"}, %{"a_a" => "bhjk"}, "a string", 1],
+      ...>   thingA: "thing A",
+      ...>   thing_b: "thing B"
+      ...> }
+      iex> NiceMaps.parse(map, keys: :camelcase, key_type: :string)
+      %{"helloThere" => [%{"aA" => "asdf"}, %{"aA" => "bhjk"}, "a string", 1], "thingA" => "thing A", "thingB" => "thing B"}
+
+      iex> map = %{
+      ...>   "helloThere" => [%{"aA" => "asdf"}, %{"a_a" => "bhjk"}, "a string", 1],
+      ...>   thingA: "thing A",
+      ...>   thing_b: "thing B"
+      ...> }
+      iex> [:hello_there, :thing_a, :thing_b] # make sure atoms exist
+      iex> NiceMaps.parse(map, keys: :snake_case, key_type: :existing_atom)
+      %{:hello_there => [%{:a_a => "asdf"}, %{:a_a => "bhjk"}, "a string", 1], :thing_a => "thing A", :thing_b => "thing B"}
   """
   def parse(map_or_struct, opts \\ [])
 
@@ -122,15 +148,21 @@ defmodule NiceMaps do
     end
   end
 
-  defp parse_key_type(key, nil), do: key
-
   defp parse_key_type(key, :existing_atom) when is_atom(key), do: key
 
   defp parse_key_type(key, :existing_atom) when is_bitstring(key),
     do: String.to_existing_atom(key)
 
+  defp parse_key_type(key, :unsave_atom) when is_atom(key), do: key
+
+  defp parse_key_type(key, :unsave_atom) when is_bitstring(key),
+    do: String.to_atom(key)
+
   defp parse_key_type(key, :string) when is_bitstring(key), do: key
+
   defp parse_key_type(key, :string), do: to_string(key)
+
+  defp parse_key_type(key, _), do: key
 
   defp parse_snake_case(map, opts) do
     Enum.map(map, fn
@@ -151,7 +183,7 @@ defmodule NiceMaps do
     if key_type do
       parse_key_type(new_key, key_type)
     else
-      String.to_atom(new_key)
+      String.to_existing_atom(new_key)
     end
   end
 
@@ -173,7 +205,7 @@ defmodule NiceMaps do
 
     key
     |> Macro.camelize()
-    |> String.replace_leading(String.upcase(first_char), first_char)
+    |> String.replace_prefix(String.upcase(first_char), first_char)
     |> parse_key_type(key_type)
   end
 
@@ -184,7 +216,7 @@ defmodule NiceMaps do
     if key_type do
       parse_key_type(new_key, key_type)
     else
-      String.to_atom(new_key)
+      String.to_existing_atom(new_key)
     end
   end
 
