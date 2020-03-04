@@ -1,3 +1,5 @@
+[![Hex Version](https://img.shields.io/hexpm/v/nice_maps.svg)](https://hex.pm/packages/nice_maps)
+
 # NiceMaps
 
 NiceMaps provides a single function `parse` to convert maps into the desired format.
@@ -7,7 +9,7 @@ or convert structs to maps.
 
 ## :fire: Danger Zone :fire:
 
-`NiceMaps` uses [`String.to_existing_atom/1`](https://hexdocs.pm/elixir/String.html#to_existing_atom/1) for conversions from string keys and camelcase-snake_case, so please make sure your atoms exists before attempting something like
+`NiceMaps` uses [`String.to_existing_atom/1`](https://hexdocs.pm/elixir/String.html#to_existing_atom/1) for conversions from string keys / camelcase-snake_case, so please make sure your atoms exists before attempting something like
 
 ```elixir
 %{this_does_not_exist_as_camelcase: "abc"} |> NiceMaps.parse(keys: :camelcase)
@@ -20,6 +22,10 @@ If you need to convert a map with unknown atoms, please use string keys instead:
 ```elixir
 %{this_does_not_exist_as_camelcase: "abc"} |> NiceMaps.parse(keys: :camelcase, key_type: :string)
 # %{"thisDoesNotExistAsCamelcase" => "abc"}
+
+# or
+
+%{"this_does_not_exist_as_camelcase" => "abc"} |> NiceMaps.parse(keys: :camelcase)
 ```
 
 `NiceMaps` does not provide a `key_type: :atom` option for the same reason explained later, but you can convert keys to existing atoms using `key_type: :existing_atom`. If you absolutely insist on creating unknown atoms, there is a way to do it, but I will leave it to you to figure it out from the code (because I think it is a bad idea, and you should really know what you are doing before using it.)
