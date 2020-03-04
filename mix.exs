@@ -6,8 +6,10 @@ defmodule NiceMaps.MixProject do
   def project do
     [
       app: :nice_maps,
+      description: "A library to transform map keys / structs into maps.",
       version: "0.3.0",
       elixir: "~> 1.8",
+      test_coverage: [tool: Coverex.Task],
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       package: package(),
@@ -40,6 +42,7 @@ defmodule NiceMaps.MixProject do
   defp deps do
     [
       {:benchee, "~> 1.0.1", only: :test},
+      {:coverex, "~> 1.5", only: :test},
       {:ex_doc, "~> 0.21", only: :dev, runtime: false}
     ]
   end
