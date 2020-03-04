@@ -23,7 +23,7 @@ defmodule NiceMaps.MixProject do
         "lib",
         "mix.exs",
         "README.md",
-        "LICENSE.md"
+        "LICENSE"
       ],
       links: %{"github" => @github},
       maintainers: ["Fabian Zitter <fabian.zitter@gmail.com>"],
