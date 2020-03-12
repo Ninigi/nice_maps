@@ -9,7 +9,7 @@ or convert structs to maps.
 
 ## :fire: Danger Zone :fire:
 
-`NiceMaps` uses [`String.to_existing_atom/1`](https://hexdocs.pm/elixir/String.html#to_existing_atom/1) for conversions from string keys / camelcase-snake_case, so please make sure your atoms exists before attempting something like
+`NiceMaps` uses [`String.to_existing_atom/1`](https://hexdocs.pm/elixir/String.html#to_existing_atom/1) for conversions from string keys to atom keys and camelcase-snake_case, so please make sure your atoms exists before attempting something like
 
 ```elixir
 %{this_does_not_exist_as_camelcase: "abc"} |> NiceMaps.parse(keys: :camelcase)
