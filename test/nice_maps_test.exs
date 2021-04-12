@@ -67,4 +67,53 @@ defmodule NiceMapsTest do
       refute Map.has_key?(map2, :__struct__)
     end
   end
+
+  describe "NiceMaps.merge_values" do
+    test "[] values" do
+      acc = %{
+        order_lines: [%{fulfillment_status: "partial"}]
+      }
+
+      new = %{
+        order_lines: [%{fulfillment_status: "fulfilled"}]
+      }
+
+      assert %{
+               order_lines: [%{fulfillment_status: "partial"}, %{fulfillment_status: "fulfilled"}]
+             } = NiceMaps.merge_values(acc, new)
+    end
+
+    test "%{} values" do
+      acc = %{
+        order: %{id: 12}
+      }
+
+      new = %{
+        order: %{id: 15, title: "new"}
+      }
+
+      assert %{order: %{id: 15, title: "new"}} = NiceMaps.merge_values(acc, new)
+    end
+
+    test "string values" do
+      acc = %{
+        title: "old"
+      }
+
+      new = %{
+        title: "new"
+      }
+
+      assert %{title: "oldnew"} = NiceMaps.merge_values(acc, new)
+    end
+
+    test "number value" do
+      acc = %{count: 1}
+      new = %{count: 2}
+
+      assert_raise NiceMaps.Errors.MergeError, fn ->
+        NiceMaps.merge_values(acc, new)
+      end
+    end
+  end
 end

@@ -224,4 +224,101 @@ defmodule NiceMaps do
     key_type = Keyword.get(opts, :key_type)
     parse_key_type(key, key_type)
   end
+
+  @doc """
+  Merges the values of two given maps.
+
+  ## Options
+
+    - `:keys` (optional) only merge the given keys
+    - `:fun`  (optional) merge handler annonymous function that accepts two arguments
+
+  ## Examples
+
+      iex> acc_requests = %{success: ["200", "200", "201"], failed: []}
+      iex> new_requests = %{success: ["200", "200"], failed: ["404"]}
+      iex> NiceMaps.merge_values(acc_requests, new_requests)
+      %{success: ["200", "200", "201", "200", "200"], failed: ["404"]}
+
+      iex> acc_requests = %{success: ["200", "200", "201"], failed: []}
+      iex> new_requests = %{success: ["200", "200"], failed: ["404"]}
+      iex> NiceMaps.merge_values(acc_requests, new_requests, keys: [:success])
+      %{success: ["200", "200", "201", "200", "200"]}
+
+      iex> joiner_fn = fn v1, v2 -> (v1 ++ v2) |> Enum.join(",") end
+      iex> acc_requests = %{success: ["200", "200", "201"], failed: []}
+      iex> new_requests = %{success: ["200", "200"], failed: ["404"]}
+      iex> NiceMaps.merge_values(acc_requests, new_requests, fun: joiner_fn)
+      %{success: "200,200,201,200,200", failed: "404"}
+
+      iex> acc_requests = %{success: ["200", "200", "201"], failed: ["404"]}
+      iex> new_requests = %{success: ["200", "200"], failed: ["404"]}
+      iex> NiceMaps.merge_values(acc_requests, new_requests,
+      ...>  keys: [
+      ...>    :success,
+      ...>    failed: fn v1, v2 -> (v1 ++ v2) |> Enum.join(",") end
+      ...>  ]
+      ...> )
+      %{success: ["200", "200", "201", "200", "200"], failed: "404,404" }
+
+  """
+  @spec merge_values(map(), map(), keyword()) :: map()
+  def merge_values(%{} = map1, %{} = map2, opts \\ []) do
+    keys = Keyword.get(opts, :keys, Map.keys(map1))
+
+    Enum.reduce(keys, %{}, fn
+      {key, fun}, acc when is_function(fun) ->
+        Map.put_new(acc, key, fun.(map1[key], map2[key]))
+
+      key, acc when is_atom(key) ->
+        try do
+          Map.put_new(acc, key, apply_merge_fun(map1[key], map2[key], opts))
+        rescue
+          # we catch the base error to provide more information afterwards
+          _ in NiceMaps.Errors.MergeError ->
+            raise(NiceMaps.Errors.MergeError, %{key: key, values: {map1[key], map2[key]}})
+
+          e ->
+            e
+        end
+    end)
+  end
+
+  defp apply_merge_fun(val1, val2, opts) do
+    if fun = Keyword.get(opts, :fun) do
+      fun.(val1, val2)
+    else
+      apply_merge_fun(val1, val2)
+    end
+  end
+
+  defp apply_merge_fun(val1, val2) when is_list(val1) and is_list(val2),
+    do: val1 ++ val2
+
+  defp apply_merge_fun(val1, val2) when is_list(val1) and is_nil(val2),
+    do: val1
+
+  defp apply_merge_fun(val1, val2) when is_nil(val1) and is_list(val2),
+    do: val2
+
+  defp apply_merge_fun(val1, val2) when is_map(val1) and is_map(val2),
+    do: Map.merge(val1, val2)
+
+  defp apply_merge_fun(val1, val2) when is_map(val1) and is_nil(val2),
+    do: val1
+
+  defp apply_merge_fun(val1, val2) when is_nil(val1) and is_map(val2),
+    do: val2
+
+  defp apply_merge_fun(val1, val2) when is_bitstring(val1) and is_bitstring(val2),
+    do: val1 <> val2
+
+  defp apply_merge_fun(val1, val2) when is_bitstring(val1) and is_nil(val2),
+    do: val1
+
+  defp apply_merge_fun(val1, val2) when is_nil(val1) and is_bitstring(val2),
+    do: val2
+
+  defp apply_merge_fun(_val1, _val2),
+    do: raise(NiceMaps.Errors.MergeError)
 end
