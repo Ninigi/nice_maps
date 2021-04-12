@@ -111,7 +111,7 @@ defmodule NiceMapsTest do
       acc = %{count: 1}
       new = %{count: 2}
 
-      assert_raise NiceMaps.MergeError, fn ->
+      assert_raise NiceMaps.Errors.MergeError, fn ->
         NiceMaps.merge_values(acc, new)
       end
     end

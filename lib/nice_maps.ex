@@ -245,18 +245,43 @@ defmodule NiceMaps do
       iex> NiceMaps.merge_values(acc_requests, new_requests, keys: [:success])
       %{success: ["200", "200", "201", "200", "200"]}
 
+      iex> joiner_fn = fn v1, v2 -> (v1 ++ v2) |> Enum.join(",") end
+      iex> acc_requests = %{success: ["200", "200", "201"], failed: []}
+      iex> new_requests = %{success: ["200", "200"], failed: ["404"]}
+      iex> NiceMaps.merge_values(acc_requests, new_requests, fun: joiner_fn)
+      %{success: "200,200,201,200,200", failed: "404"}
+
+      iex> acc_requests = %{success: ["200", "200", "201"], failed: ["404"]}
+      iex> new_requests = %{success: ["200", "200"], failed: ["404"]}
+      iex> NiceMaps.merge_values(acc_requests, new_requests,
+      ...>  keys: [
+      ...>    :success,
+      ...>    failed: fn v1, v2 -> (v1 ++ v2) |> Enum.join(",") end
+      ...>  ]
+      ...> )
+      %{success: ["200", "200", "201", "200", "200"], failed: "404,404" }
+
   """
   @spec merge_values(map(), map(), keyword()) :: map()
   def merge_values(%{} = map1, %{} = map2, opts \\ []) do
     keys = Keyword.get(opts, :keys, Map.keys(map1))
 
-    Enum.reduce(keys, %{}, fn key, acc ->
-      Map.put_new(acc, key, apply_merge_fun(map1[key], map2[key], opts))
-    end)
-  end
+    Enum.reduce(keys, %{}, fn
+      {key, fun}, acc when is_function(fun) ->
+        Map.put_new(acc, key, fun.(map1[key], map2[key]))
 
-  defmodule MergeError do
-    defexception message: "Can't merge given values because of incompatible types."
+      key, acc when is_atom(key) ->
+        try do
+          Map.put_new(acc, key, apply_merge_fun(map1[key], map2[key], opts))
+        rescue
+          # we catch the base error to provide more information afterwards
+          _ in NiceMaps.Errors.MergeError ->
+            raise(NiceMaps.Errors.MergeError, %{key: key, values: {map1[key], map2[key]}})
+
+          e ->
+            e
+        end
+    end)
   end
 
   defp apply_merge_fun(val1, val2, opts) do
@@ -295,5 +320,5 @@ defmodule NiceMaps do
     do: val2
 
   defp apply_merge_fun(_val1, _val2),
-    do: raise(MergeError)
+    do: raise(NiceMaps.Errors.MergeError)
 end
